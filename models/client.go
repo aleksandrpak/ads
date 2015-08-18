@@ -23,6 +23,6 @@ type Client struct {
 	UpdatedAt     time.Time     `bson:"updatedAt"`
 }
 
-func GetClient(r *http.Request) Client {
-	return Client{Age: 20}
+func GetClient(r *http.Request) *Client {
+	return &Client{Age: 20}
 }

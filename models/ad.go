@@ -9,6 +9,15 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+type AdsCollection interface {
+	GetAd(client *Client) *Ad
+	UpdateAd(ad *Ad)
+}
+
+type adsCollection struct {
+	*mgo.Collection
+}
+
 type Description struct {
 	ID   bson.ObjectId `bson:"id,omitempty" json:"-"`
 	Text string        `bson:"text" json:"text"`
@@ -45,8 +54,12 @@ type Ad struct {
 	Target                 Target        `bson:"target" json:"target"`
 }
 
-func GetAd(collection *mgo.Collection, client Client) *Ad {
-	ads := collection.Find(bson.M{
+func NewAdsCollection(c *mgo.Collection) AdsCollection {
+	return &adsCollection{c}
+}
+
+func (c *adsCollection) GetAd(client *Client) *Ad {
+	ads := c.Find(bson.M{
 		"isActive":         true,
 		"isCampaignActive": true,
 		"$or": [4]interface{}{
@@ -69,7 +82,7 @@ func GetAd(collection *mgo.Collection, client Client) *Ad {
 	}
 
 	var ad Ad
-	err := collection.FindId(adID.ID).One(&ad)
+	err := c.FindId(adID.ID).One(&ad)
 	if err != nil {
 		glog.Errorf("failed to get ad: %v", err)
 		return nil
@@ -78,7 +91,7 @@ func GetAd(collection *mgo.Collection, client Client) *Ad {
 	return &ad
 }
 
-func UpdateAd(collection *mgo.Collection, ad *Ad) {
+func (c *adsCollection) UpdateAd(ad *Ad) {
 	viewsCount := ad.ApproxViewsCount + 1
 	rank := 1.0
 
@@ -86,5 +99,5 @@ func UpdateAd(collection *mgo.Collection, ad *Ad) {
 		rank = ad.ApproxConversionsCount / viewsCount
 	}
 
-	collection.UpdateId(ad.ID, bson.M{"$inc": bson.M{"approxViewsCount": 1}, "approxRank": rank})
+	c.UpdateId(ad.ID, bson.M{"$inc": bson.M{"approxViewsCount": 1}, "approxRank": rank})
 }

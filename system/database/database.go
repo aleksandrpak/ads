@@ -1,18 +1,19 @@
 package database
 
 import (
+	"github.com/aleksandrpak/ads/models"
 	"github.com/aleksandrpak/ads/system/config"
 	"github.com/golang/glog"
 	mgo "gopkg.in/mgo.v2"
 )
 
 type Database interface {
-	Ads() *mgo.Collection
+	Ads() models.AdsCollection
 }
 
 type database struct {
 	// TODO: save session and close on app exit
-	*mgo.Database
+	ads models.AdsCollection
 }
 
 func Connect(dbConfig config.DbConfig) Database {
@@ -25,9 +26,11 @@ func Connect(dbConfig config.DbConfig) Database {
 
 	dbSession.SetMode(mgo.Eventual, true)
 
-	return &database{dbSession.DB(dbConfig.Database())}
+	db := dbSession.DB(dbConfig.Database())
+
+	return &database{ads: models.NewAdsCollection(db.C("ads"))}
 }
 
-func (d *database) Ads() *mgo.Collection {
-	return d.C("ads")
+func (d *database) Ads() models.AdsCollection {
+	return d.ads
 }

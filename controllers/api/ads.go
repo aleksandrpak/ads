@@ -14,16 +14,15 @@ type AdsController interface {
 }
 
 func (c *controller) NextAd(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	database := c.app.Database()
 	client := models.GetClient(r)
-	collection := database.Ads()
+	collection := c.app.Database().Ads()
 
-	ad := models.GetAd(collection, client)
+	ad := collection.GetAd(client)
 	if ad == nil {
 		return
 	}
 
-	go models.UpdateAd(collection, ad)
+	go collection.UpdateAd(ad)
 
 	jsonAd, err := json.Marshal(ad)
 	if err != nil {
