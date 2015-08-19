@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -28,7 +27,5 @@ type Client struct {
 }
 
 func GetClient(g geoip.DB, r *http.Request) *Client {
-	fmt.Println(r.RemoteAddr)
-	fmt.Println(g.Lookup(r.RemoteAddr))
 	return &Client{Age: 20}
 }
