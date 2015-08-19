@@ -17,7 +17,7 @@ type database struct {
 }
 
 func Connect(dbConfig config.DbConfig) Database {
-	dbSession, err := mgo.Dial(dbConfig.Hosts())
+	dbSession, err := mgo.Dial(*dbConfig.Hosts())
 
 	if err != nil {
 		glog.Fatalf("Can't connect to the database: %v", err)
@@ -26,7 +26,7 @@ func Connect(dbConfig config.DbConfig) Database {
 
 	dbSession.SetMode(mgo.Eventual, true)
 
-	db := dbSession.DB(dbConfig.Database())
+	db := dbSession.DB(*dbConfig.Database())
 
 	return &database{ads: models.NewAdsCollection(db.C("ads"))}
 }

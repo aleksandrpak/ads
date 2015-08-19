@@ -1,8 +1,11 @@
 package models
 
 import (
+	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/aleksandrpak/ads/system/geoip"
 
 	"gopkg.in/mgo.v2/bson"
 )
@@ -17,12 +20,15 @@ type Client struct {
 	AndroidIDSha1 string        `bson:"androidAIdSha1,omitempty"`
 	AndroidIDMd5  string        `bson:"androidAIdMd5,omitempty"`
 	Geo           string        `bson:"geo"`
+	Ip            float64       `bson:"ip"`
 	Gender        string        `bson:"gender"`
 	Age           float64       `bson:"age"`
 	CreatedAt     time.Time     `bson:"createdAt"`
 	UpdatedAt     time.Time     `bson:"updatedAt"`
 }
 
-func GetClient(r *http.Request) *Client {
+func GetClient(g geoip.DB, r *http.Request) *Client {
+	fmt.Println(r.RemoteAddr)
+	fmt.Println(g.Lookup(r.RemoteAddr))
 	return &Client{Age: 20}
 }

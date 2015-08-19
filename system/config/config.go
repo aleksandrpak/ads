@@ -8,12 +8,13 @@ import (
 )
 
 type DbConfig interface {
-	Hosts() string
-	Database() string
+	Hosts() *string
+	Database() *string
 }
 
 type AppConfig interface {
 	Port() int
+	GeoDataPath() *string
 	DbConfig() DbConfig
 }
 
@@ -23,27 +24,32 @@ type dbConfig struct {
 }
 
 type appConfig struct {
-	PortValue     int      `json:"port"`
-	DbConfigValue dbConfig `json:"dbConfig"`
+	PortValue        int      `json:"port"`
+	GeoDataPathValue string   `json:"geoDataPath"`
+	DbConfigValue    dbConfig `json:"dbConfig"`
 }
 
-func (dc *dbConfig) Hosts() string {
-	return dc.HostsValue
+func (dc *dbConfig) Hosts() *string {
+	return &dc.HostsValue
 }
 
-func (dc *dbConfig) Database() string {
-	return dc.DatabaseValue
+func (dc *dbConfig) Database() *string {
+	return &dc.DatabaseValue
 }
 
 func (ac *appConfig) Port() int {
 	return ac.PortValue
 }
 
+func (ac *appConfig) GeoDataPath() *string {
+	return &ac.GeoDataPathValue
+}
+
 func (ac *appConfig) DbConfig() DbConfig {
 	return &ac.DbConfigValue
 }
 
-func NewAppConfig(filename *string) AppConfig {
+func New(filename *string) AppConfig {
 	appConfig := &appConfig{}
 
 	data, err := ioutil.ReadFile(*filename)
