@@ -4,33 +4,33 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"runtime"
+	"os"
 
 	// TODO: Remove in production
 	_ "expvar"
 	_ "net/http/pprof"
 
-	"github.com/golang/glog"
-
 	"github.com/aleksandrpak/ads/controllers/api"
 	"github.com/aleksandrpak/ads/system/application"
+	"github.com/aleksandrpak/ads/system/log"
 	"github.com/julienschmidt/httprouter"
 )
 
 func main() {
 	configFilename := flag.String("config", "config.json", "Path to configuration file")
 
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	// TODO: Add different destinations
+	log.Init(os.Stderr, os.Stderr, os.Stdout, os.Stdout, os.Stdout)
 
 	app := application.NewApplication(configFilename)
 	router := route(app)
 
 	// TODO: Remove in production
 	go func() {
-		glog.Fatal(http.ListenAndServe("localhost:6060", nil))
+		log.Fatal.Pf("Failed to start profiling tools: ", http.ListenAndServe("localhost:6060", nil))
 	}()
 
-	glog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", app.AppConfig().Port()), router))
+	log.Fatal.Pf("Failed to start: ", http.ListenAndServe(fmt.Sprintf(":%d", app.AppConfig().Port()), router))
 }
 
 func route(app application.Application) *httprouter.Router {

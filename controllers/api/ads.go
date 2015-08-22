@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/aleksandrpak/ads/models"
-	"github.com/golang/glog"
+	"github.com/aleksandrpak/ads/system/log"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -14,22 +14,41 @@ type AdsController interface {
 }
 
 func (c *controller) NextAd(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	client := models.GetClient(c.app.GeoIP(), r)
-	ads := c.app.Database().Ads()
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	ad := ads.GetAd(client)
-	if ad == nil {
+	database := c.app.Database()
+	apps := database.Apps()
+
+	app, err := apps.GetApp(r)
+	if err != nil {
+		log.Error.Pf("failed to get app: %v", err)
+		c.writeError(w, err)
 		return
 	}
 
-	go ads.UpdateAd(ad)
+	client, err := models.GetClient(c.app.GeoIP(), r)
+	if err != nil {
+		log.Error.Pf("failed to get client: %v", err)
+		c.writeError(w, err)
+		return
+	}
+
+	views := database.Views()
+	ad, err := database.Ads().GetAd(client, views, database.Conversions(), c.app.AppConfig().DbConfig())
+	if err != nil {
+		log.Error.Pf("failed to get ad: %v", err)
+		c.writeError(w, err)
+		return
+	}
 
 	jsonAd, err := json.Marshal(ad)
 	if err != nil {
-		glog.Errorf("failed to serialize to json: %v", err)
+		log.Error.Pf("failed to serialize ad to json: %v", err)
+		c.writeError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	go views.SaveView(ad.ID, app.ID, client)
+
 	w.Write(jsonAd)
 }

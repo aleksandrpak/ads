@@ -3,6 +3,9 @@
 	"geoDataPath": "data/GeoLite2-City.mmdb.gz",
 	"dbConfig": {
 		"host": "localhost",
-		"database": "ads"
+		"database": "ads",
+		"newTrafficPercentage": 0.2,
+		"startViewsCount": 1000,
+		"statisticHours": 24
 	}
 }
