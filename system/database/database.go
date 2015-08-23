@@ -2,6 +2,7 @@ package database
 
 import (
 	"github.com/aleksandrpak/ads/models"
+	"github.com/aleksandrpak/ads/models/statistic"
 	"github.com/aleksandrpak/ads/system/config"
 	"github.com/aleksandrpak/ads/system/log"
 	mgo "gopkg.in/mgo.v2"
@@ -10,16 +11,16 @@ import (
 type Database interface {
 	Ads() models.AdsCollection
 	Apps() models.AppsCollection
-	Views() models.ViewsCollection
-	Conversions() models.ConversionsCollection
+	Views() statistic.StatisticsCollection
+	Conversions() statistic.StatisticsCollection
 }
 
 type database struct {
 	// TODO: save session and close on app exit
 	ads         models.AdsCollection
 	apps        models.AppsCollection
-	views       models.ViewsCollection
-	conversions models.ConversionsCollection
+	views       statistic.StatisticsCollection
+	conversions statistic.StatisticsCollection
 }
 
 func Connect(dbConfig config.DbConfig) Database {
@@ -37,8 +38,8 @@ func Connect(dbConfig config.DbConfig) Database {
 	return &database{
 		ads:         models.NewAdsCollection(db.C("ads")),
 		apps:        models.NewAppsCollection(db.C("apps")),
-		views:       models.NewViewsCollection(db.C("views")),
-		conversions: models.NewConversionsCollection(db.C("conversions")),
+		views:       statistic.NewStatisticsCollection(db.C("views"), dbConfig.StatisticHours()),
+		conversions: statistic.NewStatisticsCollection(db.C("conversions"), dbConfig.StatisticHours()),
 	}
 }
 
@@ -50,10 +51,10 @@ func (d *database) Apps() models.AppsCollection {
 	return d.apps
 }
 
-func (d *database) Views() models.ViewsCollection {
+func (d *database) Views() statistic.StatisticsCollection {
 	return d.views
 }
 
-func (d *database) Conversions() models.ConversionsCollection {
+func (d *database) Conversions() statistic.StatisticsCollection {
 	return d.conversions
 }

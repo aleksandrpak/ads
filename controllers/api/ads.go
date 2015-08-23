@@ -33,7 +33,7 @@ func (c *controller) NextAd(w http.ResponseWriter, r *http.Request, _ httprouter
 		return
 	}
 
-	ad, err := c.strategy.NextAd(devApp, client)
+	ad, err := c.strategy.NextAd(client)
 	if err != nil {
 		log.Error.Pf("failed to get ad: %v", err)
 		c.writeError(w, err)
@@ -47,7 +47,7 @@ func (c *controller) NextAd(w http.ResponseWriter, r *http.Request, _ httprouter
 		return
 	}
 
-	go database.Views().SaveView(ad.ID, devApp.ID, client)
+	go database.Views().SaveStatistic(ad.ID, devApp.ID, client)
 
 	w.Write(jsonAd)
 }

@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 	"io"
+	"path"
 	"runtime"
 	"time"
 )
@@ -54,8 +55,9 @@ func getTime() string {
 }
 
 func getCaller() (string, int) {
-	_, filename, line, ok := runtime.Caller(2)
+	_, p, line, ok := runtime.Caller(2)
 	if ok {
+		_, filename := path.Split(p)
 		return filename, line
 	}
 

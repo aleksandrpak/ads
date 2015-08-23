@@ -32,6 +32,7 @@ func main() {
 		log.Fatal.Pf("Failed to start profiling tools: ", http.ListenAndServe("localhost:6060", nil))
 	}()
 
+	// TODO: Make graceful shutdown
 	log.Fatal.Pf("Failed to start: ", http.ListenAndServe(fmt.Sprintf(":%d", app.AppConfig().Port()), router))
 }
 

@@ -31,26 +31,22 @@ func New(db database.Database, dbConfig config.DbConfig) strategy.Strategy {
 	}
 }
 
-func (s *weightStrategy) NextAd(app *models.App, client *models.Client) (*models.Ad, error) {
+func (s *weightStrategy) NextAd(client *models.Client) (*models.Ad, error) {
 	isNew := s.isNewRand.Float32() < s.dbConfig.NewTrafficPercentage()
 
-	ad := s.tryGetNewAd(isNew, client.Info)
+	ad := s.getNewAd(isNew, client.Info)
 	if ad != nil {
 		return ad, nil
 	}
 
-	adIDs, ad, err := s.tryGetAdIDs(isNew, client.Info)
+	adIDs, ad, err := s.getAdIDs(isNew, client.Info)
 	if ad != nil {
 		return ad, nil
 	} else if err != nil {
 		return nil, err
 	}
 
-	viewsPerAd, conversionsPerAd, err := s.getStatistics(adIDs)
-	if err != nil {
-		return nil, err
-	}
-
+	viewsPerAd, conversionsPerAd := s.getStatistics(adIDs)
 	rankPerAd, totalRank := calculateRanks(viewsPerAd, conversionsPerAd)
 	adID := s.chooseAd(adIDs, rankPerAd, totalRank)
 
@@ -63,7 +59,7 @@ func (s *weightStrategy) NextAd(app *models.App, client *models.Client) (*models
 	return ad, nil
 }
 
-func (s *weightStrategy) tryGetNewAd(isNew bool, info *models.ClientInfo) *models.Ad {
+func (s *weightStrategy) getNewAd(isNew bool, info *models.ClientInfo) *models.Ad {
 	if !isNew {
 		return nil
 	}
@@ -71,7 +67,7 @@ func (s *weightStrategy) tryGetNewAd(isNew bool, info *models.ClientInfo) *model
 	return s.db.Ads().GetNewAd(info, s.dbConfig.StartViewsCount())
 }
 
-func (s *weightStrategy) tryGetAdIDs(isNew bool, info *models.ClientInfo) (*[]bson.ObjectId, *models.Ad, error) {
+func (s *weightStrategy) getAdIDs(isNew bool, info *models.ClientInfo) (*[]bson.ObjectId, *models.Ad, error) {
 	ads, startViewsCount := s.db.Ads(), s.dbConfig.StartViewsCount()
 
 	adIDs, err := ads.GetAdIDs(info, startViewsCount)
@@ -92,22 +88,12 @@ func (s *weightStrategy) tryGetAdIDs(isNew bool, info *models.ClientInfo) (*[]bs
 	return adIDs, nil, nil
 }
 
-func (s *weightStrategy) getStatistics(adIDs *[]bson.ObjectId) (*map[bson.ObjectId]float32, *map[bson.ObjectId]float32, error) {
+func (s *weightStrategy) getStatistics(adIDs *[]bson.ObjectId) (*map[bson.ObjectId]float32, *map[bson.ObjectId]float32) {
 	period := time.Now().UTC().Add(-time.Duration(time.Hour) * time.Duration(s.dbConfig.StatisticHours()))
+	viewsPerAd := s.db.Views().GetStatistics(adIDs, period)
+	conversionsPerAd := s.db.Conversions().GetStatistics(adIDs, period)
 
-	viewsPerAd, err := s.db.Views().GetStatistics(*adIDs, period)
-	if err != nil {
-		log.Error.Pf("failed to get ads view statistics: %v", err)
-		return nil, nil, errors.New("failed to count view statistics")
-	}
-
-	conversionsPerAd, err := s.db.Conversions().GetStatistics(*adIDs, period)
-	if err != nil {
-		log.Error.Pf("failed to get ads conversion statistics: %v", err)
-		return nil, nil, errors.New("failed to count conversion statistics")
-	}
-
-	return viewsPerAd, conversionsPerAd, nil
+	return viewsPerAd, conversionsPerAd
 }
 
 func calculateRanks(viewsPerAd, conversionsPerAd *map[bson.ObjectId]float32) (*map[bson.ObjectId]float32, float32) {

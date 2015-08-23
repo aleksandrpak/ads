@@ -93,9 +93,9 @@ func buildQuery(info *ClientInfo, isNew bool, startViewsCount int) *bson.M {
 	var trafficFilter interface{}
 
 	if isNew {
-		trafficFilter = bson.M{"viewsCount": bson.M{"$lt": startViewsCount}}
+		trafficFilter = bson.M{"viewsCount": bson.M{"$lte": startViewsCount}}
 	} else {
-		trafficFilter = bson.M{"viewsCount": bson.M{"$gte": startViewsCount}}
+		trafficFilter = bson.M{"viewsCount": bson.M{"$gt": startViewsCount}}
 	}
 
 	return &bson.M{
