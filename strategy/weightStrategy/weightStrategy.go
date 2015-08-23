@@ -25,7 +25,7 @@ type weightStrategy struct {
 func New(db database.Database, dbConfig config.DbConfig) strategy.Strategy {
 	return &weightStrategy{
 		isNewRand: rand.New(rand.NewSource(time.Now().Unix())),
-		rankRand:  rand.New(rand.NewSource(time.Now().Unix())),
+		rankRand:  rand.New(rand.NewSource(time.Now().Add(time.Hour).Unix())),
 		db:        db,
 		dbConfig:  dbConfig,
 	}
