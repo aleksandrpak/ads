@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/aleksandrpak/ads/strategy"
 	"github.com/aleksandrpak/ads/system/application"
 )
 
@@ -12,11 +13,12 @@ type Controller interface {
 }
 
 type controller struct {
-	app application.Application
+	app      application.Application
+	strategy strategy.Strategy
 }
 
-func NewController(app application.Application) Controller {
-	return &controller{app}
+func NewController(app application.Application, strategy strategy.Strategy) Controller {
+	return &controller{app, strategy}
 }
 
 func (c *controller) writeError(w http.ResponseWriter, err error) {

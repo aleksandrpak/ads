@@ -19,7 +19,7 @@ func (c *controller) NextAd(w http.ResponseWriter, r *http.Request, _ httprouter
 	database := c.app.Database()
 	apps := database.Apps()
 
-	app, err := apps.GetApp(r)
+	devApp, err := apps.GetApp(r)
 	if err != nil {
 		log.Error.Pf("failed to get app: %v", err)
 		c.writeError(w, err)
@@ -33,8 +33,7 @@ func (c *controller) NextAd(w http.ResponseWriter, r *http.Request, _ httprouter
 		return
 	}
 
-	views := database.Views()
-	ad, err := database.Ads().GetAd(client, views, database.Conversions(), c.app.AppConfig().DbConfig())
+	ad, err := c.strategy.NextAd(devApp, client)
 	if err != nil {
 		log.Error.Pf("failed to get ad: %v", err)
 		c.writeError(w, err)
@@ -48,7 +47,7 @@ func (c *controller) NextAd(w http.ResponseWriter, r *http.Request, _ httprouter
 		return
 	}
 
-	go views.SaveView(ad.ID, app.ID, client)
+	go database.Views().SaveView(ad.ID, devApp.ID, client)
 
 	w.Write(jsonAd)
 }

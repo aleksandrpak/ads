@@ -1,25 +1,18 @@
 package models
 
 import (
-	"errors"
-	"math/rand"
-	"time"
-
-	"github.com/aleksandrpak/ads/system/config"
-	"github.com/aleksandrpak/ads/system/log"
-
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
 type AdsCollection interface {
-	GetAd(client *Client, views ViewsCollection, conversions ConversionsCollection, dbConfig config.DbConfig) (*Ad, error)
+	GetAdByID(adID bson.ObjectId) (*Ad, error)
+	GetAdIDs(info *ClientInfo, startViewsCount int) (*[]bson.ObjectId, error)
+	GetNewAd(info *ClientInfo, startViewsCount int) *Ad
 }
 
 type adsCollection struct {
-	coll      *mgo.Collection
-	isNewRand *rand.Rand
-	rankRand  *rand.Rand
+	*mgo.Collection
 }
 
 type Description struct {
@@ -62,38 +55,14 @@ func NewAdsCollection(c *mgo.Collection) AdsCollection {
 		"target.ageHigh",
 	)
 
-	return &adsCollection{
-		coll:      c,
-		isNewRand: rand.New(rand.NewSource(time.Now().Unix())),
-		rankRand:  rand.New(rand.NewSource(time.Now().Unix()))}
+	return &adsCollection{c}
 }
 
-func (c *adsCollection) GetAd(client *Client, views ViewsCollection, conversions ConversionsCollection, dbConfig config.DbConfig) (*Ad, error) {
-	var ad *Ad
-	startViewsCount := dbConfig.StartViewsCount()
-
-	isNew := c.isNewRand.Float32() < dbConfig.NewTrafficPercentage()
-	if isNew {
-		ad := c.tryGetNewAd(client.Info, startViewsCount)
-		if ad != nil {
-			return ad, nil
-		}
-	}
-
+func (c *adsCollection) GetAdIDs(info *ClientInfo, startViewsCount int) (*[]bson.ObjectId, error) {
 	var adIDs []ID
-
-	err := c.coll.Find(buildQuery(client.Info, false, startViewsCount)).Sort("_id").Select(bson.M{"_id": 1}).All(&adIDs)
+	err := c.Find(buildQuery(info, false, startViewsCount)).Sort("_id").Select(bson.M{"_id": 1}).All(&adIDs)
 	if err != nil {
-		if !isNew {
-			ad = c.tryGetNewAd(client.Info, startViewsCount)
-		}
-
-		if ad == nil {
-			log.Error.Pf("failed to execute ad ids query: %v", err)
-			return nil, errors.New("no ads found")
-		} else {
-			return ad, nil
-		}
+		return nil, err
 	}
 
 	ids := make([]bson.ObjectId, len(adIDs))
@@ -101,59 +70,18 @@ func (c *adsCollection) GetAd(client *Client, views ViewsCollection, conversions
 		ids[i] = id.ID
 	}
 
-	period := time.Now().UTC().Add(time.Duration(time.Hour) * time.Duration(dbConfig.StatisticHours()))
-
-	viewsPerAd, err := views.GetStatistics(ids, period)
-	if err != nil {
-		log.Error.Pf("failed to get ads view statistics: %v", err)
-		return nil, errors.New("failed to count view statistics")
-	}
-
-	conversionsPerAd, err := conversions.GetStatistics(ids, period)
-	if err != nil {
-		log.Error.Pf("failed to get ads conversion statistics: %v", err)
-		return nil, errors.New("failed to count conversion statistics")
-	}
-
-	rankPerAd := make(map[bson.ObjectId]float32)
-	totalRank := float32(0)
-	for k, v := range *viewsPerAd {
-		c, ok := (*conversionsPerAd)[k]
-		var rank float32
-		if ok {
-			rank = c / v
-		} else {
-			rank = 1 / v
-		}
-
-		totalRank += rank
-		rankPerAd[k] = rank
-	}
-
-	var adID bson.ObjectId
-	currentWeight := float32(0)
-	targetWeight := c.rankRand.Float32()
-	for _, id := range ids {
-		adID = id
-		currentWeight += rankPerAd[adID] / totalRank
-		if currentWeight >= targetWeight {
-			break
-		}
-	}
-
-	ad = &Ad{}
-	_, err = c.coll.FindId(adID).Apply(mgo.Change{Update: bson.M{"$inc": bson.M{"viewsCount": 1}}}, ad)
-	if err != nil {
-		log.Error.Pf("failed to get ad: %v", err)
-		return nil, errors.New("internal error while getting ad")
-	}
-
-	return ad, nil
+	return &ids, err
 }
 
-func (c *adsCollection) tryGetNewAd(info *ClientInfo, startViewsCount int) *Ad {
+func (c *adsCollection) GetAdByID(adID bson.ObjectId) (*Ad, error) {
+	ad := &Ad{}
+	_, err := c.FindId(adID).Apply(mgo.Change{Update: bson.M{"$inc": bson.M{"viewsCount": 1}}}, ad)
+	return ad, err
+}
+
+func (c *adsCollection) GetNewAd(info *ClientInfo, startViewsCount int) *Ad {
 	var ad Ad
-	_, err := c.coll.Find(buildQuery(info, true, startViewsCount)).Apply(mgo.Change{Update: bson.M{"$inc": bson.M{"viewsCount": 1}}}, &ad)
+	_, err := c.Find(buildQuery(info, true, startViewsCount)).Apply(mgo.Change{Update: bson.M{"$inc": bson.M{"viewsCount": 1}}}, &ad)
 	if err != nil {
 		return nil
 	}

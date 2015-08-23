@@ -11,6 +11,7 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/aleksandrpak/ads/controllers/api"
+	"github.com/aleksandrpak/ads/strategy/weightStrategy"
 	"github.com/aleksandrpak/ads/system/application"
 	"github.com/aleksandrpak/ads/system/log"
 	"github.com/julienschmidt/httprouter"
@@ -23,7 +24,8 @@ func main() {
 	log.Init(os.Stderr, os.Stderr, os.Stdout, os.Stdout, os.Stdout)
 
 	app := application.NewApplication(configFilename)
-	router := route(app)
+	apiController := newApiController(app)
+	router := route(apiController)
 
 	// TODO: Remove in production
 	go func() {
@@ -33,9 +35,13 @@ func main() {
 	log.Fatal.Pf("Failed to start: ", http.ListenAndServe(fmt.Sprintf(":%d", app.AppConfig().Port()), router))
 }
 
-func route(app application.Application) *httprouter.Router {
-	apiController := api.NewController(app)
+func newApiController(app application.Application) api.Controller {
+	strategy := weightStrategy.New(app.Database(), app.AppConfig().DbConfig())
 
+	return api.NewController(app, strategy)
+}
+
+func route(apiController api.Controller) *httprouter.Router {
 	router := httprouter.New()
 
 	router.GET("/api/ads", apiController.NextAd)
