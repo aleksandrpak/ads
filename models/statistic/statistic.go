@@ -44,7 +44,7 @@ func (c *statisticsCollection) SaveStatistic(adID bson.ObjectId, appID bson.Obje
 		At:     now,
 	})
 
-	go c.updateStatistic(adID, now)
+	c.updateStatistic(adID, now)
 }
 
 func (c *statisticsCollection) GetStatistics(adIDs *[]bson.ObjectId, period time.Time) *map[bson.ObjectId]float32 {

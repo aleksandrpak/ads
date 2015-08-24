@@ -25,9 +25,11 @@ type statisticCache struct {
 	statisticHours int64
 }
 
+// TODO: Refactor cache creating
 func new(c *mgo.Collection, statisticHours int64) *statisticCache {
 	cache := statisticCache{c, sync.RWMutex{}, make(map[bson.ObjectId]*statistic), statisticHours}
 
+	// TODO: Filter inactive
 	it := c.Find(bson.M{"at": bson.M{"$gte": time.Now().Add(-time.Hour * time.Duration(statisticHours)).UnixNano()}}).Select(bson.M{"adId": 1, "at": 1}).Sort("at").Iter()
 	var s Statistic
 	for it.Next(&s) {
@@ -110,8 +112,11 @@ func (c *statisticCache) updateStatistic(adID bson.ObjectId, now int64) {
 
 	if !ok {
 		c.lock.Lock()
-		s = &statistic{}
-		c.cache[adID] = s
+		s, ok = c.cache[adID]
+		if !ok {
+			s = &statistic{}
+			c.cache[adID] = s
+		}
 		c.lock.Unlock()
 	}
 

@@ -11,7 +11,7 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/aleksandrpak/ads/controllers/api"
-	"github.com/aleksandrpak/ads/strategy/weightStrategy"
+	"github.com/aleksandrpak/ads/strategy/rankStrategy"
 	"github.com/aleksandrpak/ads/system/application"
 	"github.com/aleksandrpak/ads/system/log"
 	"github.com/julienschmidt/httprouter"
@@ -37,7 +37,7 @@ func main() {
 }
 
 func newApiController(app application.Application) api.Controller {
-	strategy := weightStrategy.New(app.Database(), app.AppConfig().DbConfig())
+	strategy := rankStrategy.New(app.Database(), app.AppConfig().DbConfig())
 
 	return api.NewController(app, strategy)
 }

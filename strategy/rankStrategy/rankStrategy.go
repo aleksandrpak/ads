@@ -1,4 +1,4 @@
-package weightStrategy
+package rankStrategy
 
 import (
 	"errors"
@@ -15,7 +15,7 @@ import (
 )
 
 // TODO: Remove logging from domain objects
-type weightStrategy struct {
+type rankStrategy struct {
 	isNewRand *rand.Rand
 	rankRand  *rand.Rand
 	db        database.Database
@@ -23,7 +23,7 @@ type weightStrategy struct {
 }
 
 func New(db database.Database, dbConfig config.DbConfig) strategy.Strategy {
-	return &weightStrategy{
+	return &rankStrategy{
 		isNewRand: rand.New(rand.NewSource(time.Now().Unix())),
 		rankRand:  rand.New(rand.NewSource(time.Now().Add(time.Hour).Unix())),
 		db:        db,
@@ -31,7 +31,7 @@ func New(db database.Database, dbConfig config.DbConfig) strategy.Strategy {
 	}
 }
 
-func (s *weightStrategy) NextAd(client *models.Client) (*models.Ad, error) {
+func (s *rankStrategy) NextAd(client *models.Client) (*models.Ad, error) {
 	isNew := s.isNewRand.Float32() < s.dbConfig.NewTrafficPercentage()
 
 	ad := s.getNewAd(isNew, client.Info)
@@ -59,7 +59,7 @@ func (s *weightStrategy) NextAd(client *models.Client) (*models.Ad, error) {
 	return ad, nil
 }
 
-func (s *weightStrategy) getNewAd(isNew bool, info *models.ClientInfo) *models.Ad {
+func (s *rankStrategy) getNewAd(isNew bool, info *models.ClientInfo) *models.Ad {
 	if !isNew {
 		return nil
 	}
@@ -67,7 +67,7 @@ func (s *weightStrategy) getNewAd(isNew bool, info *models.ClientInfo) *models.A
 	return s.db.Ads().GetNewAd(info, s.dbConfig.StartViewsCount())
 }
 
-func (s *weightStrategy) getAdIDs(isNew bool, info *models.ClientInfo) (*[]bson.ObjectId, *models.Ad, error) {
+func (s *rankStrategy) getAdIDs(isNew bool, info *models.ClientInfo) (*[]bson.ObjectId, *models.Ad, error) {
 	ads, startViewsCount := s.db.Ads(), s.dbConfig.StartViewsCount()
 
 	adIDs, err := ads.GetAdIDs(info, startViewsCount)
@@ -88,7 +88,7 @@ func (s *weightStrategy) getAdIDs(isNew bool, info *models.ClientInfo) (*[]bson.
 	return adIDs, nil, nil
 }
 
-func (s *weightStrategy) getStatistics(adIDs *[]bson.ObjectId) (*map[bson.ObjectId]float32, *map[bson.ObjectId]float32) {
+func (s *rankStrategy) getStatistics(adIDs *[]bson.ObjectId) (*map[bson.ObjectId]float32, *map[bson.ObjectId]float32) {
 	period := time.Now().UTC().Add(-time.Duration(time.Hour) * time.Duration(s.dbConfig.StatisticHours()))
 	viewsPerAd := s.db.Views().GetStatistics(adIDs, period)
 	conversionsPerAd := s.db.Conversions().GetStatistics(adIDs, period)
@@ -106,7 +106,7 @@ func calculateRanks(viewsPerAd, conversionsPerAd *map[bson.ObjectId]float32) (*m
 		if ok {
 			rank = conversions / views
 		} else {
-			rank = 1 / views
+			continue
 		}
 
 		totalRank += rank
@@ -116,17 +116,23 @@ func calculateRanks(viewsPerAd, conversionsPerAd *map[bson.ObjectId]float32) (*m
 	return &rankPerAd, totalRank
 }
 
-func (s *weightStrategy) chooseAd(adIDs *[]bson.ObjectId, rankPerAd *map[bson.ObjectId]float32, totalRank float32) bson.ObjectId {
+func (s *rankStrategy) chooseAd(adIDs *[]bson.ObjectId, rankPerAd *map[bson.ObjectId]float32, totalRank float32) bson.ObjectId {
 	var adID bson.ObjectId
-	currentWeight := float32(0)
-	targetWeight := s.rankRand.Float32()
+	currentRank := float32(0)
+	targetRank := s.rankRand.Float32()
 
 	for _, id := range *adIDs {
-		adID = id
-		currentWeight += (*rankPerAd)[adID] / totalRank
-		if currentWeight >= targetWeight {
+		rank, ok := (*rankPerAd)[adID]
+		if !ok {
+			continue
+		}
+
+		currentRank += rank / totalRank
+		if currentRank >= targetRank {
 			break
 		}
+
+		adID = id
 	}
 
 	return adID
