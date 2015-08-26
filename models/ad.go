@@ -50,8 +50,10 @@ type Ad struct {
 	Target              Target        `bson:"target" json:"target"`
 }
 
-type cacheKey struct {
-	info            ClientInfo // TODO: accept only required fields for query
+type targetInfo struct {
+	Geo             string
+	Gender          string
+	Age             byte
 	startViewsCount int
 }
 
@@ -70,20 +72,15 @@ func NewAdsCollection(c *mgo.Collection) AdsCollection {
 		New(100).
 		Expiration(time.Second).
 		LoaderFunc(func(key interface{}) (interface{}, error) {
-		cKey := key.(cacheKey)
-
 		var adIDs []ID
-		query := buildQuery(&cKey.info, false, cKey.startViewsCount)
-		err := c.Find(query).Sort("_id").Select(bson.M{"_id": 1}).All(&adIDs)
-
+		info := key.(targetInfo)
+		err := c.Find(buildQuery(&info, false)).Sort("_id").Select(bson.M{"_id": 1}).All(&adIDs)
 		return &adIDs, err
-
 	}).Build()}
 }
 
 func (c *adsCollection) GetAdIDs(info *ClientInfo, startViewsCount int) (*[]ID, error) {
-	adIDs, err := c.cache.Get(cacheKey{*info, startViewsCount})
-
+	adIDs, err := c.cache.Get(targetInfo{info.Geo.Country.ISOCode, info.Gender, info.Age, startViewsCount})
 	return adIDs.(*[]ID), err
 }
 
@@ -95,7 +92,10 @@ func (c *adsCollection) GetAdByID(adID bson.ObjectId) (*Ad, error) {
 
 func (c *adsCollection) GetNewAd(info *ClientInfo, startViewsCount int) *Ad {
 	var ad Ad
-	_, err := c.Find(buildQuery(info, true, startViewsCount)).Apply(mgo.Change{Update: bson.M{"$inc": bson.M{"viewsCount": 1}}}, &ad)
+	_, err := c.
+		Find(buildQuery(&targetInfo{info.Geo.Country.ISOCode, info.Gender, info.Age, startViewsCount}, true)).
+		Apply(mgo.Change{Update: bson.M{"$inc": bson.M{"viewsCount": 1}}}, &ad)
+
 	if err != nil {
 		return nil
 	}
@@ -103,13 +103,13 @@ func (c *adsCollection) GetNewAd(info *ClientInfo, startViewsCount int) *Ad {
 	return &ad
 }
 
-func buildQuery(info *ClientInfo, isNew bool, startViewsCount int) *bson.M {
+func buildQuery(info *targetInfo, isNew bool) *bson.M {
 	var trafficFilter interface{}
 
 	if isNew {
-		trafficFilter = bson.M{"viewsCount": bson.M{"$lte": startViewsCount}}
+		trafficFilter = bson.M{"viewsCount": bson.M{"$lte": info.startViewsCount}}
 	} else {
-		trafficFilter = bson.M{"viewsCount": bson.M{"$gt": startViewsCount}}
+		trafficFilter = bson.M{"viewsCount": bson.M{"$gt": info.startViewsCount}}
 	}
 
 	return &bson.M{
@@ -125,19 +125,19 @@ func buildQuery(info *ClientInfo, isNew bool, startViewsCount int) *bson.M {
 	}
 }
 
-func getGeoQuery(info *ClientInfo) []interface{} {
+func getGeoQuery(info *targetInfo) []interface{} {
 	query := []interface{}{
 		bson.M{"target.geo": bson.M{"$exists": false}},
 	}
 
-	if info.Geo.Country.ISOCode != "" {
-		query = append(query, bson.M{"target.geo": info.Geo.Country.ISOCode})
+	if info.Geo != "" {
+		query = append(query, bson.M{"target.geo": info.Geo})
 	}
 
 	return query
 }
 
-func getGenderQuery(info *ClientInfo) []interface{} {
+func getGenderQuery(info *targetInfo) []interface{} {
 	query := []interface{}{
 		bson.M{"target.gender": bson.M{"$exists": false}},
 	}
@@ -149,7 +149,7 @@ func getGenderQuery(info *ClientInfo) []interface{} {
 	return query
 }
 
-func getAgeLowQuery(info *ClientInfo) []interface{} {
+func getAgeLowQuery(info *targetInfo) []interface{} {
 	query := []interface{}{
 		bson.M{"target.ageLow": bson.M{"$exists": false}},
 	}
@@ -161,7 +161,7 @@ func getAgeLowQuery(info *ClientInfo) []interface{} {
 	return query
 }
 
-func getAgeHighQuery(info *ClientInfo) []interface{} {
+func getAgeHighQuery(info *targetInfo) []interface{} {
 	query := []interface{}{
 		bson.M{"target.ageHigh": bson.M{"$exists": false}},
 	}
