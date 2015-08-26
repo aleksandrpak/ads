@@ -1,0 +1,7 @@
+# Ignore everything inside www folder
+www/*
+# …instead of this file
+!www/README.md
+!www/index.html
+
+machines/*
