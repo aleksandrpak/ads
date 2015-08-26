@@ -2,7 +2,7 @@ package statistic
 
 type minuteStatistic struct {
 	unixMinutes int64
-	count       int32
+	count       float32
 }
 
 type statisticHeap []minuteStatistic

@@ -29,39 +29,41 @@ type statisticCache struct {
 func new(c *mgo.Collection, statisticHours int64) *statisticCache {
 	cache := statisticCache{c, sync.RWMutex{}, make(map[bson.ObjectId]*statistic), statisticHours}
 
-	// TODO: Filter inactive
-	it := c.Find(bson.M{"at": bson.M{"$gte": time.Now().Add(-time.Hour * time.Duration(statisticHours)).UnixNano()}}).Select(bson.M{"adId": 1, "at": 1}).Sort("at").Iter()
-	var s Statistic
+	it := c.Pipe([]bson.M{
+		bson.M{"$match": bson.M{"at": bson.M{"$gte": time.Now().Add(-time.Hour * time.Duration(statisticHours)).UnixNano()}}},
+		bson.M{"$project": bson.M{
+			"adId": 1,
+			"minutes": bson.M{"$subtract": []bson.M{
+				bson.M{"$divide": []interface{}{"$at", 60000000000}},
+				bson.M{"$mod": []interface{}{bson.M{"$divide": []interface{}{"$at", 60000000000}}, 1}}}}}},
+		bson.M{"$group": bson.M{
+			"_id":   bson.M{"adId": "$adId", "minutes": "$minutes"},
+			"count": bson.M{"$sum": 1}}},
+		bson.M{"$sort": bson.M{"minutes": 1}},
+	}).Iter()
+
+	var s struct {
+		ID struct {
+			AdID    bson.ObjectId `bson:"adId"`
+			Minutes int64         `bson:"minutes"`
+		} `bson:"_id"`
+		Count float32 `bson:"count"`
+	}
+
 	for it.Next(&s) {
-		minutes := s.At / 60000000000
-		v, ok := cache.cache[s.AdID]
-		if ok {
-			if v.currentStatistic != nil && v.currentStatistic.unixMinutes == minutes {
-				v.currentStatistic.count++
-			} else {
-				if v.currentStatistic != nil {
-					if v.minuteStatistics == nil {
-						v.minuteStatistics = &statisticHeap{}
-					}
-
-					heap.Push(v.minuteStatistics, *v.currentStatistic)
-				}
-
-				v.currentStatistic = &minuteStatistic{
-					unixMinutes: minutes,
-					count:       1,
-				}
-			}
-		} else {
+		v, ok := cache.cache[s.ID.AdID]
+		if !ok {
 			v = &statistic{}
-			v.currentStatistic = &minuteStatistic{
-				unixMinutes: minutes,
-				count:       1,
-			}
-			cache.cache[s.AdID] = v
+			v.minuteStatistics = &statisticHeap{}
+			cache.cache[s.ID.AdID] = v
 		}
 
-		v.totalCount++
+		heap.Push(v.minuteStatistics, minuteStatistic{
+			unixMinutes: s.ID.Minutes,
+			count:       s.Count,
+		})
+
+		v.totalCount += s.Count
 	}
 
 	if err := it.Close(); err != nil {
