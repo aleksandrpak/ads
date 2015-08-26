@@ -3,7 +3,7 @@ package statistic
 import (
 	"time"
 
-	"github.com/aleksandrpak/ads/models"
+	"git.startupteam.ru/aleksandrpak/ads/models"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"

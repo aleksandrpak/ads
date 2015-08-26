@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/aleksandrpak/ads/strategy"
-	"github.com/aleksandrpak/ads/system/application"
+	"git.startupteam.ru/aleksandrpak/ads/strategy"
+	"git.startupteam.ru/aleksandrpak/ads/system/application"
 )
 
 type Controller interface {

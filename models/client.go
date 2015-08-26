@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/aleksandrpak/ads/system/geoip"
+	"git.startupteam.ru/aleksandrpak/ads/system/geoip"
 )
 
 // TODO: Declare field names in init()

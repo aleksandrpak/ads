@@ -8,14 +8,16 @@ type minuteStatistic struct {
 type statisticHeap []minuteStatistic
 
 func (h *statisticHeap) Len() int {
-	return len(h)
+	return len(*h)
 }
 
 func (h *statisticHeap) Less(i, j int) bool {
-	return h[i].unixMinutes < h[j].unixMinutes
+	return (*h)[i].unixMinutes < (*h)[j].unixMinutes
 }
 
-func (h *statisticHeap) Swap(i, j int) {
+func (heap *statisticHeap) Swap(i, j int) {
+	h := *heap
+
 	h[i], h[j] = h[j], h[i]
 }
 

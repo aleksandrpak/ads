@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/aleksandrpak/ads/system/log"
+	"git.startupteam.ru/aleksandrpak/ads/system/log"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"

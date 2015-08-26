@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"github.com/aleksandrpak/ads/system/log"
+	"git.startupteam.ru/aleksandrpak/ads/system/log"
 )
 
 type DbConfig interface {

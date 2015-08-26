@@ -1,9 +1,9 @@
 package application
 
 import (
-	"github.com/aleksandrpak/ads/system/config"
-	"github.com/aleksandrpak/ads/system/database"
-	"github.com/aleksandrpak/ads/system/geoip"
+	"git.startupteam.ru/aleksandrpak/ads/system/config"
+	"git.startupteam.ru/aleksandrpak/ads/system/database"
+	"git.startupteam.ru/aleksandrpak/ads/system/geoip"
 )
 
 type Application interface {

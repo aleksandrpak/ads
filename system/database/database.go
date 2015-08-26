@@ -1,10 +1,10 @@
 package database
 
 import (
-	"github.com/aleksandrpak/ads/models"
-	"github.com/aleksandrpak/ads/models/statistic"
-	"github.com/aleksandrpak/ads/system/config"
-	"github.com/aleksandrpak/ads/system/log"
+	"git.startupteam.ru/aleksandrpak/ads/models"
+	"git.startupteam.ru/aleksandrpak/ads/models/statistic"
+	"git.startupteam.ru/aleksandrpak/ads/system/config"
+	"git.startupteam.ru/aleksandrpak/ads/system/log"
 	mgo "gopkg.in/mgo.v2"
 )
 

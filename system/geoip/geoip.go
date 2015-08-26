@@ -3,7 +3,7 @@ package geoip
 import (
 	"net"
 
-	"github.com/aleksandrpak/ads/system/log"
+	"git.startupteam.ru/aleksandrpak/ads/system/log"
 	"github.com/fiorix/freegeoip"
 )
 

@@ -8,7 +8,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	"github.com/aleksandrpak/ads/system/log"
+	"git.startupteam.ru/aleksandrpak/ads/system/log"
 )
 
 type statistic struct {

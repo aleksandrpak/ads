@@ -10,10 +10,10 @@ import (
 	_ "expvar"
 	_ "net/http/pprof"
 
-	"github.com/aleksandrpak/ads/controllers/api"
-	"github.com/aleksandrpak/ads/strategy/rankStrategy"
-	"github.com/aleksandrpak/ads/system/application"
-	"github.com/aleksandrpak/ads/system/log"
+	"git.startupteam.ru/aleksandrpak/ads/controllers/api"
+	"git.startupteam.ru/aleksandrpak/ads/strategy/rankStrategy"
+	"git.startupteam.ru/aleksandrpak/ads/system/application"
+	"git.startupteam.ru/aleksandrpak/ads/system/log"
 	"github.com/julienschmidt/httprouter"
 )
 

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/aleksandrpak/ads/models"
-	"github.com/aleksandrpak/ads/system/log"
+	"git.startupteam.ru/aleksandrpak/ads/models"
+	"git.startupteam.ru/aleksandrpak/ads/system/log"
 	"github.com/julienschmidt/httprouter"
 )
 
