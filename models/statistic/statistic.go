@@ -11,7 +11,7 @@ import (
 
 type StatisticsCollection interface {
 	SaveStatistic(adID bson.ObjectId, appID bson.ObjectId, client *models.Client)
-	GetStatistics(adIDs *[]bson.ObjectId, period time.Time) *map[bson.ObjectId]float32
+	GetStatistics(adIDs *[]models.ID, period time.Time) *map[bson.ObjectId]float32
 }
 
 type statisticsCollection struct {
@@ -47,18 +47,18 @@ func (c *statisticsCollection) SaveStatistic(adID bson.ObjectId, appID bson.Obje
 	c.updateStatistic(adID, now)
 }
 
-func (c *statisticsCollection) GetStatistics(adIDs *[]bson.ObjectId, period time.Time) *map[bson.ObjectId]float32 {
+func (c *statisticsCollection) GetStatistics(adIDs *[]models.ID, period time.Time) *map[bson.ObjectId]float32 {
 	statistic := make(map[bson.ObjectId]float32)
 
 	c.lock.RLock()
 	for _, adID := range *adIDs {
-		s, ok := c.cache[adID]
+		s, ok := c.cache[adID.ID]
 		if !ok {
 			continue
 		}
 
 		s.RLock()
-		statistic[adID] = s.totalCount
+		statistic[adID.ID] = s.totalCount
 		s.RUnlock()
 	}
 	c.lock.RUnlock()

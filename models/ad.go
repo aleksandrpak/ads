@@ -1,18 +1,24 @@
 package models
 
 import (
+	"time"
+
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+
+	"github.com/bluele/gcache"
 )
 
 type AdsCollection interface {
 	GetAdByID(adID bson.ObjectId) (*Ad, error)
-	GetAdIDs(info *ClientInfo, startViewsCount int) (*[]bson.ObjectId, error)
+	GetAdIDs(info *ClientInfo, startViewsCount int) (*[]ID, error)
 	GetNewAd(info *ClientInfo, startViewsCount int) *Ad
 }
 
 type adsCollection struct {
 	*mgo.Collection
+
+	cache gcache.Cache
 }
 
 type Description struct {
@@ -44,6 +50,11 @@ type Ad struct {
 	Target              Target        `bson:"target" json:"target"`
 }
 
+type cacheKey struct {
+	info            ClientInfo // TODO: accept only required fields for query
+	startViewsCount int
+}
+
 func NewAdsCollection(c *mgo.Collection) AdsCollection {
 	c.EnsureIndexKey(
 		"isActive",
@@ -55,22 +66,25 @@ func NewAdsCollection(c *mgo.Collection) AdsCollection {
 		"target.ageHigh",
 	)
 
-	return &adsCollection{c}
+	return &adsCollection{c, gcache.
+		New(100).
+		Expiration(time.Second).
+		LoaderFunc(func(key interface{}) (interface{}, error) {
+		cKey := key.(cacheKey)
+
+		var adIDs []ID
+		query := buildQuery(&cKey.info, false, cKey.startViewsCount)
+		err := c.Find(query).Sort("_id").Select(bson.M{"_id": 1}).All(&adIDs)
+
+		return &adIDs, err
+
+	}).Build()}
 }
 
-func (c *adsCollection) GetAdIDs(info *ClientInfo, startViewsCount int) (*[]bson.ObjectId, error) {
-	var adIDs []ID
-	err := c.Find(buildQuery(info, false, startViewsCount)).Sort("_id").Select(bson.M{"_id": 1}).All(&adIDs)
-	if err != nil {
-		return nil, err
-	}
+func (c *adsCollection) GetAdIDs(info *ClientInfo, startViewsCount int) (*[]ID, error) {
+	adIDs, err := c.cache.Get(cacheKey{*info, startViewsCount})
 
-	ids := make([]bson.ObjectId, len(adIDs))
-	for i, id := range adIDs {
-		ids[i] = id.ID
-	}
-
-	return &ids, err
+	return adIDs.(*[]ID), err
 }
 
 func (c *adsCollection) GetAdByID(adID bson.ObjectId) (*Ad, error) {

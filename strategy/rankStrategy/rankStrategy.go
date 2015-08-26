@@ -67,7 +67,7 @@ func (s *rankStrategy) getNewAd(isNew bool, info *models.ClientInfo) *models.Ad 
 	return s.db.Ads().GetNewAd(info, s.dbConfig.StartViewsCount())
 }
 
-func (s *rankStrategy) getAdIDs(isNew bool, info *models.ClientInfo) (*[]bson.ObjectId, *models.Ad, error) {
+func (s *rankStrategy) getAdIDs(isNew bool, info *models.ClientInfo) (*[]models.ID, *models.Ad, error) {
 	ads, startViewsCount := s.db.Ads(), s.dbConfig.StartViewsCount()
 
 	adIDs, err := ads.GetAdIDs(info, startViewsCount)
@@ -88,7 +88,7 @@ func (s *rankStrategy) getAdIDs(isNew bool, info *models.ClientInfo) (*[]bson.Ob
 	return adIDs, nil, nil
 }
 
-func (s *rankStrategy) getStatistics(adIDs *[]bson.ObjectId) (*map[bson.ObjectId]float32, *map[bson.ObjectId]float32) {
+func (s *rankStrategy) getStatistics(adIDs *[]models.ID) (*map[bson.ObjectId]float32, *map[bson.ObjectId]float32) {
 	period := time.Now().UTC().Add(-time.Duration(time.Hour) * time.Duration(s.dbConfig.StatisticHours()))
 	viewsPerAd := s.db.Views().GetStatistics(adIDs, period)
 	conversionsPerAd := s.db.Conversions().GetStatistics(adIDs, period)
@@ -116,23 +116,23 @@ func calculateRanks(viewsPerAd, conversionsPerAd *map[bson.ObjectId]float32) (*m
 	return &rankPerAd, totalRank
 }
 
-func (s *rankStrategy) chooseAd(adIDs *[]bson.ObjectId, rankPerAd *map[bson.ObjectId]float32, totalRank float32) bson.ObjectId {
+func (s *rankStrategy) chooseAd(adIDs *[]models.ID, rankPerAd *map[bson.ObjectId]float32, totalRank float32) bson.ObjectId {
 	var adID bson.ObjectId
 	currentRank := float32(0)
 	targetRank := s.rankRand.Float32()
 
 	for _, id := range *adIDs {
-		rank, ok := (*rankPerAd)[adID]
+		rank, ok := (*rankPerAd)[id.ID]
 		if !ok {
 			continue
 		}
+
+		adID = id.ID
 
 		currentRank += rank / totalRank
 		if currentRank >= targetRank {
 			break
 		}
-
-		adID = id
 	}
 
 	return adID
