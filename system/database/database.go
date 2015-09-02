@@ -12,6 +12,7 @@ type Database interface {
 	Ads() models.AdsCollection
 	Apps() models.AppsCollection
 	Views() statistic.StatisticsCollection
+	Clicks() statistic.StatisticsCollection
 	Conversions() statistic.StatisticsCollection
 }
 
@@ -20,6 +21,7 @@ type database struct {
 	ads         models.AdsCollection
 	apps        models.AppsCollection
 	views       statistic.StatisticsCollection
+	clicks      statistic.StatisticsCollection
 	conversions statistic.StatisticsCollection
 }
 
@@ -39,6 +41,7 @@ func Connect(dbConfig config.DbConfig) Database {
 		ads:         models.NewAdsCollection(db.C("ads")),
 		apps:        models.NewAppsCollection(db.C("apps")),
 		views:       statistic.NewStatisticsCollection(db.C("views"), dbConfig.StatisticHours()),
+		clicks:      statistic.NewStatisticsCollection(db.C("clicks"), dbConfig.StatisticHours()),
 		conversions: statistic.NewStatisticsCollection(db.C("conversions"), dbConfig.StatisticHours()),
 	}
 }
@@ -53,6 +56,10 @@ func (d *database) Apps() models.AppsCollection {
 
 func (d *database) Views() statistic.StatisticsCollection {
 	return d.views
+}
+
+func (d *database) Clicks() statistic.StatisticsCollection {
+	return d.clicks
 }
 
 func (d *database) Conversions() statistic.StatisticsCollection {

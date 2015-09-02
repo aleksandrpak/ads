@@ -34,7 +34,7 @@ type Target struct {
 }
 
 type Ad struct {
-	ID                  bson.ObjectId `bson:"_id" json:"-"`
+	ID                  bson.ObjectId `bson:"_id,omitempty" json:"id"`
 	Name                string        `bson:"name" json:"name"`
 	Campaign            bson.ObjectId `bson:"campaign" json:"campaign"`
 	IsActive            bool          `bson:"isActive" json:"isActive"`
@@ -81,7 +81,11 @@ func NewAdsCollection(c *mgo.Collection) AdsCollection {
 
 func (c *adsCollection) GetAdIDs(info *ClientInfo, startViewsCount int) (*[]ID, error) {
 	adIDs, err := c.cache.Get(targetInfo{info.Geo.Country.ISOCode, info.Gender, info.Age, startViewsCount})
-	return adIDs.(*[]ID), err
+	if err != nil {
+		return nil, err
+	}
+
+	return adIDs.(*[]ID), nil
 }
 
 func (c *adsCollection) GetAdByID(adID bson.ObjectId) (*Ad, error) {

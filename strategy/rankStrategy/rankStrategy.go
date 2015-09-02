@@ -1,8 +1,8 @@
 package rankStrategy
 
 import (
-	"errors"
 	"math/rand"
+	"net/http"
 	"time"
 
 	"gopkg.in/mgo.v2/bson"
@@ -13,6 +13,8 @@ import (
 	"git.startupteam.ru/aleksandrpak/ads/system/database"
 	"git.startupteam.ru/aleksandrpak/ads/system/log"
 )
+
+const notFoundDesc string = "no suitable ad found"
 
 // TODO: Remove logging from domain objects
 type rankStrategy struct {
@@ -31,7 +33,7 @@ func New(db database.Database, dbConfig config.DbConfig) strategy.Strategy {
 	}
 }
 
-func (s *rankStrategy) NextAd(client *models.Client) (*models.Ad, error) {
+func (s *rankStrategy) NextAd(client *models.Client) (*models.Ad, log.ServerError) {
 	isNew := s.isNewRand.Float32() < s.dbConfig.NewTrafficPercentage()
 
 	ad := s.getNewAd(isNew, client.Info)
@@ -43,7 +45,7 @@ func (s *rankStrategy) NextAd(client *models.Client) (*models.Ad, error) {
 	if ad != nil {
 		return ad, nil
 	} else if err != nil {
-		return nil, err
+		return nil, log.New(http.StatusNotFound, notFoundDesc, err)
 	}
 
 	viewsPerAd, conversionsPerAd := s.getStatistics(adIDs)
@@ -52,8 +54,7 @@ func (s *rankStrategy) NextAd(client *models.Client) (*models.Ad, error) {
 
 	ad, err = s.db.Ads().GetAdByID(adID)
 	if err != nil {
-		log.Error.Pf("failed to get ad: %v", err)
-		return nil, errors.New("internal error while getting ad")
+		return nil, log.New(http.StatusNotFound, notFoundDesc, err)
 	}
 
 	return ad, nil
@@ -71,18 +72,17 @@ func (s *rankStrategy) getAdIDs(isNew bool, info *models.ClientInfo) (*[]models.
 	ads, startViewsCount := s.db.Ads(), s.dbConfig.StartViewsCount()
 
 	adIDs, err := ads.GetAdIDs(info, startViewsCount)
-	if err != nil {
+	if err != nil || len(*adIDs) == 0 {
 		var ad *models.Ad
 		if !isNew {
 			ad = ads.GetNewAd(info, startViewsCount)
 		}
 
-		if ad == nil {
-			log.Error.Pf("failed to execute ad ids query: %v", err)
-			return nil, nil, errors.New("no ads found")
-		} else {
-			return nil, ad, nil
+		if err != nil {
+			return nil, nil, err
 		}
+
+		return nil, ad, nil
 	}
 
 	return adIDs, nil, nil

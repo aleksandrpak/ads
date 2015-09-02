@@ -18,6 +18,7 @@ var (
 
 type Logger interface {
 	Pf(format string, v ...interface{})
+	Er(err ServerError)
 }
 
 type logger struct {
@@ -29,8 +30,8 @@ type fatalLogger struct {
 	io.Writer
 }
 
-func Init(fatalHandle, errorHandle, warningHandle, infoHandle, traceHandle io.Writer) {
-	Fatal = &fatalLogger{fatalHandle}
+func Init(errorHandle, warningHandle, infoHandle, traceHandle io.Writer) {
+	Fatal = &fatalLogger{}
 	Error = &logger{writer: errorHandle, prefix: "ERROR"}
 	Warning = &logger{writer: warningHandle, prefix: "WARNING"}
 	Info = &logger{writer: infoHandle, prefix: "INFO"}
@@ -43,11 +44,32 @@ func (lg *logger) Pf(format string, v ...interface{}) {
 	fmt.Fprintf(lg.writer, "%v: %v %v:%v: %v\n", lg.prefix, getTime(), filename, line, fmt.Sprintf(format, v...))
 }
 
+func (lg *logger) Er(err ServerError) {
+	e, desc := err.Error(), err.Desc()
+	if e != nil && desc != nil {
+		fmt.Fprintf(lg.writer, "%v: %v %v:%v: error: %v, desc: %v\n", lg.prefix, getTime(), *err.File(), err.Line(), e, *desc)
+	} else if e != nil {
+		fmt.Fprintf(lg.writer, "%v: %v %v:%v: %v\n", lg.prefix, getTime(), *err.File(), err.Line(), e)
+	} else if desc != nil {
+		fmt.Fprintf(lg.writer, "%v: %v %v:%v: %v\n", lg.prefix, getTime(), *err.File(), err.Line(), *desc)
+	}
+}
+
 func (lg *fatalLogger) Pf(format string, v ...interface{}) {
 	filename, line := getCaller()
 
-	fmt.Fprintf(lg, "FATAL: %v %v:%v: %v\n", getTime(), filename, line, fmt.Sprintf(format, v...))
 	panic(fmt.Sprintf("%v %v:%v: %v", getTime(), filename, line, fmt.Sprintf(format, v...)))
+}
+
+func (lg *fatalLogger) Er(err ServerError) {
+	e, desc := err.Error(), err.Desc()
+	if e != nil && desc != nil {
+		panic(fmt.Sprintf("%v %v:%v: error: %v, desc: %v\n", getTime(), *err.File(), err.Line(), e, *desc))
+	} else if e != nil {
+		panic(fmt.Sprintf("%v %v:%v: %v\n", getTime(), *err.File(), err.Line(), e))
+	} else if desc != nil {
+		panic(fmt.Sprintf("%v %v:%v: %v\n", getTime(), *err.File(), err.Line(), *desc))
+	}
 }
 
 func getTime() string {

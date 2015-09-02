@@ -1,16 +1,15 @@
 package models
 
 import (
-	"errors"
 	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 
 	"git.startupteam.ru/aleksandrpak/ads/system/geoip"
+	"git.startupteam.ru/aleksandrpak/ads/system/log"
 )
 
-// TODO: Declare field names in init()
 type ClientIds struct {
 	InternalID    string `bson:"internalId,omitempty"`
 	AppleID       string `bson:"appleId,omitempty"`
@@ -36,7 +35,7 @@ type Client struct {
 	Info *ClientInfo `bson:"info"`
 }
 
-func GetClient(g geoip.DB, r *http.Request) (*Client, error) {
+func GetClient(g geoip.DB, r *http.Request) (*Client, log.ServerError) {
 	info, err := parseInfo(g, r)
 	if err != nil {
 		return nil, err
@@ -48,7 +47,7 @@ func GetClient(g geoip.DB, r *http.Request) (*Client, error) {
 	}, nil
 }
 
-func parseInfo(g geoip.DB, r *http.Request) (*ClientInfo, error) {
+func parseInfo(g geoip.DB, r *http.Request) (*ClientInfo, log.ServerError) {
 	query := r.URL.Query()
 
 	info, err := parseRequiredInfo(query)
@@ -66,20 +65,20 @@ func parseInfo(g geoip.DB, r *http.Request) (*ClientInfo, error) {
 	return info, nil
 }
 
-func parseRequiredInfo(query url.Values) (*ClientInfo, error) {
+func parseRequiredInfo(query url.Values) (*ClientInfo, log.ServerError) {
 	os := query.Get("os")
 	if os == "" {
-		return nil, errors.New("OS is not specified")
+		return nil, log.NewError(http.StatusBadRequest, "os is not specified")
 	}
 
 	osVersion := query.Get("osVersion")
 	if osVersion == "" {
-		return nil, errors.New("OS version is not specified")
+		return nil, log.NewError(http.StatusBadRequest, "os version is not specified")
 	}
 
 	deviceModel := query.Get("deviceModel")
 	if deviceModel == "" {
-		return nil, errors.New("Device model is no specified")
+		return nil, log.NewError(http.StatusBadRequest, "device model is not specified")
 	}
 
 	return &ClientInfo{

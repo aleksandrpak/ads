@@ -1,5 +1,5 @@
 {
-	"port": 3000,
+	"port": 3001,
 	"geoDataPath": "data/GeoLite2-City.mmdb.gz",
 	"dbConfig": {
 		"host": "localhost",

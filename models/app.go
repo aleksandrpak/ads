@@ -1,7 +1,7 @@
 package models
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
 
 	"git.startupteam.ru/aleksandrpak/ads/system/log"
@@ -11,7 +11,7 @@ import (
 )
 
 type AppsCollection interface {
-	GetApp(r *http.Request) (*App, error)
+	GetApp(r *http.Request) (*App, log.ServerError)
 }
 
 type appsCollection struct {
@@ -19,7 +19,7 @@ type appsCollection struct {
 }
 
 type App struct {
-	ID       bson.ObjectId `bson:"_id" json:"-"`
+	ID       bson.ObjectId `bson:"_id"`
 	AppToken string        `bson:"appToken"`
 }
 
@@ -31,17 +31,16 @@ func NewAppsCollection(c *mgo.Collection) AppsCollection {
 	return &appsCollection{c}
 }
 
-func (c *appsCollection) GetApp(r *http.Request) (*App, error) {
+func (c *appsCollection) GetApp(r *http.Request) (*App, log.ServerError) {
 	token := r.URL.Query().Get("appToken")
 	if token == "" {
-		return nil, errors.New("App token is not specified")
+		return nil, log.NewError(http.StatusBadRequest, "App token is not specified")
 	}
 
 	var app App
 	err := c.Find(&bson.M{"appToken": token}).One(&app)
 	if err != nil {
-		log.Error.Pf("failed to get app with token \"%v\": %v", token, err)
-		return nil, errors.New("App token is not registered")
+		return nil, log.New(http.StatusForbidden, fmt.Sprintf("app token %v is not found", token), err)
 	}
 
 	return &app, nil

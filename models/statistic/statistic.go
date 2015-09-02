@@ -1,17 +1,21 @@
 package statistic
 
 import (
+	"net/http"
 	"time"
 
 	"git.startupteam.ru/aleksandrpak/ads/models"
+	"git.startupteam.ru/aleksandrpak/ads/system/log"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
 type StatisticsCollection interface {
-	SaveStatistic(adID bson.ObjectId, appID bson.ObjectId, client *models.Client)
+	GetById(id *string) (*Statistic, log.ServerError)
 	GetStatistics(adIDs *[]models.ID, period time.Time) *map[bson.ObjectId]float32
+	SaveStatistic(adID bson.ObjectId, appID bson.ObjectId, client *models.Client)
+	SaveNextStatistic(prev *Statistic)
 }
 
 type statisticsCollection struct {
@@ -19,10 +23,12 @@ type statisticsCollection struct {
 }
 
 type Statistic struct {
-	AdID   bson.ObjectId `bson:"adId"`
-	AppID  bson.ObjectId `bson:"appId"`
-	Client models.Client `bson:"client"`
-	At     int64         `bson:"at"`
+	ID     bson.ObjectId  `bson:"_id,omitempty"`
+	AdID   bson.ObjectId  `bson:"adId"`
+	AppID  bson.ObjectId  `bson:"appId"`
+	Client *models.Client `bson:"client,omitempty"`
+	At     int64          `bson:"at"`
+	Prev   bson.ObjectId  `bson:"prev,omitempty"`
 }
 
 func NewStatisticsCollection(c *mgo.Collection, statisticHours int64) StatisticsCollection {
@@ -34,17 +40,18 @@ func NewStatisticsCollection(c *mgo.Collection, statisticHours int64) Statistics
 	return &statisticsCollection{new(c, statisticHours)}
 }
 
-func (c *statisticsCollection) SaveStatistic(adID bson.ObjectId, appID bson.ObjectId, client *models.Client) {
-	now := time.Now().UnixNano()
+func (c *statisticsCollection) GetById(id *string) (*Statistic, log.ServerError) {
+	if !bson.IsObjectIdHex(*id) {
+		return nil, log.NewError(http.StatusBadRequest, "provided value is not valid object id")
+	}
 
-	go c.Insert(&Statistic{
-		AdID:   adID,
-		AppID:  appID,
-		Client: *client,
-		At:     now,
-	})
+	var result Statistic
+	err := c.FindId(bson.ObjectIdHex(*id)).One(&result)
+	if err != nil {
+		return nil, log.NewInternalError(err)
+	}
 
-	c.updateStatistic(adID, now)
+	return &result, nil
 }
 
 func (c *statisticsCollection) GetStatistics(adIDs *[]models.ID, period time.Time) *map[bson.ObjectId]float32 {
@@ -64,4 +71,30 @@ func (c *statisticsCollection) GetStatistics(adIDs *[]models.ID, period time.Tim
 	c.lock.RUnlock()
 
 	return &statistic
+}
+
+func (c *statisticsCollection) SaveStatistic(adID bson.ObjectId, appID bson.ObjectId, client *models.Client) {
+	now := time.Now().UnixNano()
+
+	go c.Insert(&Statistic{
+		AdID:   adID,
+		AppID:  appID,
+		Client: client,
+		At:     now,
+	})
+
+	c.updateStatistic(adID, now)
+}
+
+func (c *statisticsCollection) SaveNextStatistic(prev *Statistic) {
+	now := time.Now().UnixNano()
+
+	go c.Insert(&Statistic{
+		AdID:  prev.AdID,
+		AppID: prev.AppID,
+		At:    now,
+		Prev:  prev.ID,
+	})
+
+	c.updateStatistic(prev.AdID, now)
 }

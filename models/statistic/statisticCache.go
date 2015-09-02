@@ -11,6 +11,8 @@ import (
 	"git.startupteam.ru/aleksandrpak/ads/system/log"
 )
 
+const nanoseconds int64 = 60000000000
+
 type statistic struct {
 	sync.RWMutex
 	minuteStatistics *statisticHeap
@@ -25,7 +27,6 @@ type statisticCache struct {
 	statisticHours int64
 }
 
-// TODO: Refactor cache creating
 func new(c *mgo.Collection, statisticHours int64) *statisticCache {
 	cache := statisticCache{c, sync.RWMutex{}, make(map[bson.ObjectId]*statistic), statisticHours}
 
@@ -34,8 +35,8 @@ func new(c *mgo.Collection, statisticHours int64) *statisticCache {
 		bson.M{"$project": bson.M{
 			"adId": 1,
 			"minutes": bson.M{"$subtract": []bson.M{
-				bson.M{"$divide": []interface{}{"$at", 60000000000}},
-				bson.M{"$mod": []interface{}{bson.M{"$divide": []interface{}{"$at", 60000000000}}, 1}}}}}},
+				bson.M{"$divide": []interface{}{"$at", nanoseconds}},
+				bson.M{"$mod": []interface{}{bson.M{"$divide": []interface{}{"$at", nanoseconds}}, 1}}}}}},
 		bson.M{"$group": bson.M{
 			"_id":   bson.M{"adId": "$adId", "minutes": "$minutes"},
 			"count": bson.M{"$sum": 1}}},
@@ -79,8 +80,8 @@ func (c *statisticCache) refreshCache() {
 	<-time.After(time.Minute)
 
 	now := time.Now()
-	minMinutes := now.Add(-time.Hour*time.Duration(c.statisticHours)).UnixNano() / 60000000000
-	nowMinutes := now.UnixNano() / 60000000000
+	minMinutes := now.Add(-time.Hour*time.Duration(c.statisticHours)).UnixNano() / nanoseconds
+	nowMinutes := now.UnixNano() / nanoseconds
 
 	c.lock.RLock()
 	for _, statistic := range c.cache {
@@ -125,7 +126,7 @@ func (c *statisticCache) updateStatistic(adID bson.ObjectId, now int64) {
 	s.Lock()
 	if s.currentStatistic == nil {
 		s.currentStatistic = &minuteStatistic{
-			unixMinutes: now / 60000000000,
+			unixMinutes: now / nanoseconds,
 			count:       1,
 		}
 	} else {
