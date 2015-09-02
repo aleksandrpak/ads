@@ -13,9 +13,10 @@ import (
 
 type StatisticsCollection interface {
 	GetById(id *string) (*Statistic, log.ServerError)
-	GetStatistics(adIDs *[]models.ID, period time.Time) *map[bson.ObjectId]float32
-	SaveStatistic(adID bson.ObjectId, appID bson.ObjectId, client *models.Client)
-	SaveNextStatistic(prev *Statistic)
+	GetStatisticCount(adID *bson.ObjectId) float32
+	GetStatistics(adIDs *[]models.ID) *map[bson.ObjectId]float32
+	SaveStatistic(adID bson.ObjectId, appID bson.ObjectId, client *models.Client) *bson.ObjectId
+	SaveNextStatistic(prev *Statistic) *bson.ObjectId
 }
 
 type statisticsCollection struct {
@@ -23,7 +24,7 @@ type statisticsCollection struct {
 }
 
 type Statistic struct {
-	ID     bson.ObjectId  `bson:"_id,omitempty"`
+	ID     bson.ObjectId  `bson:"_id"`
 	AdID   bson.ObjectId  `bson:"adId"`
 	AppID  bson.ObjectId  `bson:"appId"`
 	Client *models.Client `bson:"client,omitempty"`
@@ -54,7 +55,24 @@ func (c *statisticsCollection) GetById(id *string) (*Statistic, log.ServerError)
 	return &result, nil
 }
 
-func (c *statisticsCollection) GetStatistics(adIDs *[]models.ID, period time.Time) *map[bson.ObjectId]float32 {
+func (c *statisticsCollection) GetStatisticCount(adID *bson.ObjectId) float32 {
+	var totalCount float32
+
+	c.lock.RLock()
+
+	s, ok := c.cache[*adID]
+	if ok {
+		s.RLock()
+		totalCount = s.totalCount
+		s.RUnlock()
+	}
+
+	c.lock.RUnlock()
+
+	return totalCount
+}
+
+func (c *statisticsCollection) GetStatistics(adIDs *[]models.ID) *map[bson.ObjectId]float32 {
 	statistic := make(map[bson.ObjectId]float32)
 
 	c.lock.RLock()
@@ -73,28 +91,36 @@ func (c *statisticsCollection) GetStatistics(adIDs *[]models.ID, period time.Tim
 	return &statistic
 }
 
-func (c *statisticsCollection) SaveStatistic(adID bson.ObjectId, appID bson.ObjectId, client *models.Client) {
+func (c *statisticsCollection) SaveStatistic(adID bson.ObjectId, appID bson.ObjectId, client *models.Client) *bson.ObjectId {
 	now := time.Now().UnixNano()
+	id := bson.NewObjectId()
 
 	go c.Insert(&Statistic{
+		ID:     id,
 		AdID:   adID,
 		AppID:  appID,
 		Client: client,
 		At:     now,
 	})
 
-	c.updateStatistic(adID, now)
+	go c.updateStatistic(adID, now)
+
+	return &id
 }
 
-func (c *statisticsCollection) SaveNextStatistic(prev *Statistic) {
+func (c *statisticsCollection) SaveNextStatistic(prev *Statistic) *bson.ObjectId {
 	now := time.Now().UnixNano()
+	id := bson.NewObjectId()
 
 	go c.Insert(&Statistic{
+		ID:    id,
 		AdID:  prev.AdID,
 		AppID: prev.AppID,
 		At:    now,
 		Prev:  prev.ID,
 	})
 
-	c.updateStatistic(prev.AdID, now)
+	go c.updateStatistic(prev.AdID, now)
+
+	return &id
 }

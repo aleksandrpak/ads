@@ -52,7 +52,7 @@ func (s *rankStrategy) NextAd(client *models.Client) (*models.Ad, log.ServerErro
 	rankPerAd, totalRank := calculateRanks(viewsPerAd, conversionsPerAd)
 	adID := s.chooseAd(adIDs, rankPerAd, totalRank)
 
-	ad, err = s.db.Ads().GetAdByID(adID)
+	ad, err = s.db.Ads().GetAdByID(&adID)
 	if err != nil {
 		return nil, log.New(http.StatusNotFound, notFoundDesc, err)
 	}
@@ -89,9 +89,8 @@ func (s *rankStrategy) getAdIDs(isNew bool, info *models.ClientInfo) (*[]models.
 }
 
 func (s *rankStrategy) getStatistics(adIDs *[]models.ID) (*map[bson.ObjectId]float32, *map[bson.ObjectId]float32) {
-	period := time.Now().UTC().Add(-time.Duration(time.Hour) * time.Duration(s.dbConfig.StatisticHours()))
-	viewsPerAd := s.db.Views().GetStatistics(adIDs, period)
-	conversionsPerAd := s.db.Conversions().GetStatistics(adIDs, period)
+	viewsPerAd := s.db.Views().GetStatistics(adIDs)
+	conversionsPerAd := s.db.Conversions().GetStatistics(adIDs)
 
 	return viewsPerAd, conversionsPerAd
 }

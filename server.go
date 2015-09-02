@@ -46,7 +46,7 @@ func route(c controller.Controller) *httprouter.Router {
 
 	router.GET("/ads/view", c.View)
 	router.GET("/ads/click/:viewId", c.Click)
-	router.GET("/ads/conversion/:clickId", c.Click)
+	router.GET("/ads/conversion/:clickId", c.Conversion)
 
 	return router
 }

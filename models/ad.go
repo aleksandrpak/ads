@@ -10,9 +10,10 @@ import (
 )
 
 type AdsCollection interface {
-	GetAdByID(adID bson.ObjectId) (*Ad, error)
+	GetAdByID(adID *bson.ObjectId) (*Ad, error)
 	GetAdIDs(info *ClientInfo, startViewsCount int) (*[]ID, error)
 	GetNewAd(info *ClientInfo, startViewsCount int) *Ad
+	ToggleAd(adID *bson.ObjectId, value bool)
 }
 
 type adsCollection struct {
@@ -21,33 +22,13 @@ type adsCollection struct {
 	cache gcache.Cache
 }
 
-type Description struct {
-	ID   bson.ObjectId `bson:"id" json:"-"`
-	Text string        `bson:"text" json:"text"`
-}
-
-type Target struct {
-	Geo     string  `bson:"geo" json:"geo"`
-	Gender  string  `bson:"gender" json:"gender"`
-	AgeLow  float64 `bson:"ageLow" json:"ageLow"`
-	AgeHigh float64 `bson:"ageHigh" json:"ageHigh"`
-}
-
 type Ad struct {
-	ID                  bson.ObjectId `bson:"_id,omitempty" json:"id"`
-	Name                string        `bson:"name" json:"name"`
-	Campaign            bson.ObjectId `bson:"campaign" json:"campaign"`
-	IsActive            bool          `bson:"isActive" json:"isActive"`
-	IsCampaignActive    bool          `bson:"isCampaignActive" json:"isCampaignActive"`
-	InstallURL          string        `bson:"installUrl" json:"installUrl"`
-	IconURL             string        `bson:"iconUrl" json:"iconUrl"`
-	FeedBannerURL       string        `bson:"feedBannerUrl" json:"feedBannerUrl"`
-	FullScreenBannerURL string        `bson:"fullScreenBannerUrl" json:"fullScreenBannerUrl"`
-	AdsBannerURL        string        `bson:"iAdsBannerUrl" json:"iAdsBannerUrl"`
-	ViewsCount          int           `bson:"viewsCount" json:"viewsCount"`
-	ShortDescriptions   []Description `bson:"shortDescriptions" json:"shortDescriptions"`
-	LongDescriptions    []Description `bson:"longDescriptions" json:"longDescriptions"`
-	Target              Target        `bson:"target" json:"target"`
+	ID                    bson.ObjectId `bson:"_id"`
+	ConversionURL         string        `bson:"conversionUrl"`
+	FeedBannerURL         string        `bson:"feedBannerUrl"`
+	FeedDescription       string        `bson:"feedDescription"`
+	FullscreenBannerURL   string        `bson:"fullscreenBannerUrl"`
+	FullscreenDescription string        `bson:"fullscreenDescription"`
 }
 
 type targetInfo struct {
@@ -88,9 +69,9 @@ func (c *adsCollection) GetAdIDs(info *ClientInfo, startViewsCount int) (*[]ID, 
 	return adIDs.(*[]ID), nil
 }
 
-func (c *adsCollection) GetAdByID(adID bson.ObjectId) (*Ad, error) {
+func (c *adsCollection) GetAdByID(adID *bson.ObjectId) (*Ad, error) {
 	ad := &Ad{}
-	_, err := c.FindId(adID).Apply(mgo.Change{Update: bson.M{"$inc": bson.M{"viewsCount": 1}}}, ad)
+	_, err := c.FindId(*adID).Apply(mgo.Change{Update: bson.M{"$inc": bson.M{"viewsCount": 1}}}, ad)
 	return ad, err
 }
 
@@ -105,6 +86,10 @@ func (c *adsCollection) GetNewAd(info *ClientInfo, startViewsCount int) *Ad {
 	}
 
 	return &ad
+}
+
+func (c *adsCollection) ToggleAd(adID *bson.ObjectId, value bool) {
+	c.UpdateId(adID, bson.M{"$set": bson.M{"isActive": value}})
 }
 
 func buildQuery(info *targetInfo, isNew bool) *bson.M {
