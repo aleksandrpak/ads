@@ -12,7 +12,7 @@ import (
 type AdsCollection interface {
 	GetAdByID(adID *bson.ObjectId) (*Ad, error)
 	GetAdIDs(info *ClientInfo, startViewsCount int) (*[]ID, error)
-	GetNewAd(info *ClientInfo, startViewsCount int) *Ad
+	GetNewAd(info *ClientInfo, startViewsCount int) (*Ad, error)
 	ToggleAd(adID *bson.ObjectId, value bool)
 }
 
@@ -75,17 +75,13 @@ func (c *adsCollection) GetAdByID(adID *bson.ObjectId) (*Ad, error) {
 	return ad, err
 }
 
-func (c *adsCollection) GetNewAd(info *ClientInfo, startViewsCount int) *Ad {
+func (c *adsCollection) GetNewAd(info *ClientInfo, startViewsCount int) (*Ad, error) {
 	var ad Ad
 	_, err := c.
 		Find(buildQuery(&targetInfo{info.Geo.Country.ISOCode, info.Gender, info.Age, startViewsCount}, true)).
 		Apply(mgo.Change{Update: bson.M{"$inc": bson.M{"viewsCount": 1}}}, &ad)
 
-	if err != nil {
-		return nil
-	}
-
-	return &ad
+	return &ad, err
 }
 
 func (c *adsCollection) ToggleAd(adID *bson.ObjectId, value bool) {

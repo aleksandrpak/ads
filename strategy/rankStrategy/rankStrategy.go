@@ -36,7 +36,7 @@ func New(db database.Database, dbConfig config.DbConfig) strategy.Strategy {
 func (s *rankStrategy) NextAd(client *models.Client) (*models.Ad, log.ServerError) {
 	isNew := s.isNewRand.Float32() < s.dbConfig.NewTrafficPercentage()
 
-	ad := s.getNewAd(isNew, client.Info)
+	ad, _ := s.getNewAd(isNew, client.Info)
 	if ad != nil {
 		return ad, nil
 	}
@@ -46,6 +46,10 @@ func (s *rankStrategy) NextAd(client *models.Client) (*models.Ad, log.ServerErro
 		return ad, nil
 	} else if err != nil {
 		return nil, log.New(http.StatusNotFound, notFoundDesc, err)
+	}
+
+	if adIDs == nil {
+		return nil, log.NewError(http.StatusNotFound, notFoundDesc)
 	}
 
 	viewsPerAd, conversionsPerAd := s.getStatistics(adIDs)
@@ -60,29 +64,25 @@ func (s *rankStrategy) NextAd(client *models.Client) (*models.Ad, log.ServerErro
 	return ad, nil
 }
 
-func (s *rankStrategy) getNewAd(isNew bool, info *models.ClientInfo) *models.Ad {
-	if !isNew {
-		return nil
+func (s *rankStrategy) getNewAd(isNew bool, info *models.ClientInfo) (*models.Ad, error) {
+	if isNew {
+		return s.db.Ads().GetNewAd(info, s.dbConfig.StartViewsCount())
 	}
 
-	return s.db.Ads().GetNewAd(info, s.dbConfig.StartViewsCount())
+	return nil, nil
 }
 
 func (s *rankStrategy) getAdIDs(isNew bool, info *models.ClientInfo) (*[]models.ID, *models.Ad, error) {
 	ads, startViewsCount := s.db.Ads(), s.dbConfig.StartViewsCount()
 
 	adIDs, err := ads.GetAdIDs(info, startViewsCount)
-	if err != nil || len(*adIDs) == 0 {
+	if err != nil || adIDs == nil || len(*adIDs) == 0 {
 		var ad *models.Ad
 		if !isNew {
-			ad = ads.GetNewAd(info, startViewsCount)
+			ad, err = ads.GetNewAd(info, startViewsCount)
 		}
 
-		if err != nil {
-			return nil, nil, err
-		}
-
-		return nil, ad, nil
+		return nil, ad, err
 	}
 
 	return adIDs, nil, nil
