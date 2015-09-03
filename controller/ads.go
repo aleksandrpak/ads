@@ -89,7 +89,8 @@ func (c *controller) Click(w http.ResponseWriter, r *http.Request, p httprouter.
 		return
 	}
 
-	toggleAd(&view.AdID, c.app.Database(), false)
+	// TODO: For 100 not for 24 hours
+	//toggleAd(&view.AdID, c.app.Database(), false)
 
 	url, e := url.ParseRequestURI(ad.ConversionURL + clickID.Hex()) // TODO: correctly format conversion url
 	if e != nil {
@@ -121,7 +122,6 @@ func (c *controller) Conversion(w http.ResponseWriter, r *http.Request, p httpro
 }
 
 func toggleAd(adID *bson.ObjectId, d database.Database, value bool) {
-	// TODO: For 100 not for 24 hours
 	conversions := d.Conversions().GetStatisticCount(adID)
 	if conversions == 0 {
 		d.Ads().ToggleAd(adID, value)
