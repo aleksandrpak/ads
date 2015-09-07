@@ -92,7 +92,7 @@ func (c *controller) Click(w http.ResponseWriter, r *http.Request, p httprouter.
 	// TODO: For 100 not for 24 hours
 	//toggleAd(&view.AdID, c.app.Database(), false)
 
-	url, e := url.ParseRequestURI(ad.ConversionURL + clickID.Hex()) // TODO: correctly format conversion url
+	url, e := url.ParseRequestURI(ad.ConversionURL + clickID.Hex())
 	if e != nil {
 		c.writeError(w, log.NewInternalError(e))
 		return
