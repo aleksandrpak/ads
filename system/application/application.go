@@ -4,20 +4,20 @@ import (
 	"git.startupteam.ru/aleksandrpak/ads/system/config"
 	"git.startupteam.ru/aleksandrpak/ads/system/database"
 	"git.startupteam.ru/aleksandrpak/ads/system/geoip"
+	"git.startupteam.ru/aleksandrpak/ads/system/log"
 )
 
 type Application interface {
 	Database() database.Database
 	AppConfig() config.AppConfig
 	GeoIP() geoip.DB
+	Cleanup()
 }
 
 type application struct {
-	config config.AppConfig
-	// TODO: Close database on exit
+	config   config.AppConfig
 	database database.Database
-	// TODO: Close geoip on exit
-	geoip geoip.DB
+	geoip    geoip.DB
 }
 
 func (app *application) Database() database.Database {
@@ -30,6 +30,16 @@ func (app *application) AppConfig() config.AppConfig {
 
 func (app *application) GeoIP() geoip.DB {
 	return app.geoip
+}
+
+func (app *application) Cleanup() {
+	log.Info.Pf("closing down geo ip")
+	app.geoip.Close()
+	log.Info.Pf("geo ip closed")
+
+	log.Info.Pf("closing database connection")
+	app.database.Close()
+	log.Info.Pf("database connection closed")
 }
 
 func NewApplication(configFilename *string) Application {

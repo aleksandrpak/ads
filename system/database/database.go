@@ -14,10 +14,11 @@ type Database interface {
 	Views() statistic.StatisticsCollection
 	Clicks() statistic.StatisticsCollection
 	Conversions() statistic.StatisticsCollection
+	Close()
 }
 
 type database struct {
-	// TODO: save session and close on app exit
+	session     *mgo.Session
 	ads         models.AdsCollection
 	apps        models.AppsCollection
 	views       statistic.StatisticsCollection
@@ -26,18 +27,19 @@ type database struct {
 }
 
 func Connect(dbConfig config.DbConfig) Database {
-	dbSession, err := mgo.Dial(dbConfig.Hosts())
+	session, err := mgo.Dial(dbConfig.Hosts())
 
 	if err != nil {
 		log.Fatal.Pf("Can't connect to the database: %v", err)
 		panic(err)
 	}
 
-	dbSession.SetMode(mgo.Eventual, true)
+	session.SetMode(mgo.Eventual, true)
 
-	db := dbSession.DB(dbConfig.Database())
+	db := session.DB(dbConfig.Database())
 
 	return &database{
+		session:     session,
 		ads:         models.NewAdsCollection(db.C("ads")),
 		apps:        models.NewAppsCollection(db.C("apps")),
 		views:       statistic.NewStatisticsCollection(db.C("views"), dbConfig.StatisticHours()),
@@ -64,4 +66,8 @@ func (d *database) Clicks() statistic.StatisticsCollection {
 
 func (d *database) Conversions() statistic.StatisticsCollection {
 	return d.conversions
+}
+
+func (d *database) Close() {
+	d.session.Close()
 }

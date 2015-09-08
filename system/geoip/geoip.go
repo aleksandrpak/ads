@@ -20,6 +20,7 @@ type Geo struct {
 
 type DB interface {
 	Lookup(addr string) Geo
+	Close()
 }
 
 type db struct {
@@ -44,4 +45,8 @@ func (d *db) Lookup(ip string) Geo {
 	}
 
 	return geo
+}
+
+func (db *db) Close() {
+	db.d.Close()
 }

@@ -5,15 +5,17 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
-	// TODO: Remove in production
-	//_ "expvar"
-	//_ "net/http/pprof"
+	_ "expvar"
+	_ "net/http/pprof"
 
 	"git.startupteam.ru/aleksandrpak/ads/controller"
 	"git.startupteam.ru/aleksandrpak/ads/strategy/rankStrategy"
 	"git.startupteam.ru/aleksandrpak/ads/system/application"
 	"git.startupteam.ru/aleksandrpak/ads/system/log"
+	"github.com/braintree/manners"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -26,13 +28,10 @@ func main() {
 	controller := newController(app)
 	router := route(controller)
 
-	// TODO: Remove in production
-	// go func() {
-	// 	log.Fatal.Pf("Failed to start profiling tools: ", http.ListenAndServe("localhost:6060", nil))
-	// }()
+	launchProf()
+	waitShutdown(app)
 
-	// TODO: Make graceful shutdown
-	log.Fatal.Pf("Failed to start: ", http.ListenAndServe(fmt.Sprintf(":%d", app.AppConfig().Port()), router))
+	log.Fatal.Pf("failed to start: ", manners.ListenAndServe(fmt.Sprintf(":%d", app.AppConfig().Port()), router))
 }
 
 func newController(app application.Application) controller.Controller {
@@ -49,4 +48,31 @@ func route(c controller.Controller) *httprouter.Router {
 	router.GET("/ads/conversion/:clickId", c.Conversion)
 
 	return router
+}
+
+func launchProf() {
+	go func() {
+		log.Fatal.Pf("failed to start profiling tools: ", http.ListenAndServe("localhost:6060", nil))
+	}()
+}
+
+func waitShutdown(app application.Application) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGTERM)
+
+	go func() {
+		<-c
+		fmt.Println()
+		log.Info.Pf("gracefully shutting down")
+
+		log.Info.Pf("stopping http listener")
+		manners.Close()
+		log.Info.Pf("http listener stopped")
+
+		app.Cleanup()
+
+		log.Info.Pf("shutdown finished")
+		os.Exit(1)
+	}()
 }
