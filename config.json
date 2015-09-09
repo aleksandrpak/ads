@@ -4,7 +4,7 @@
 	"dbConfig": {
 		"host": "localhost",
 		"database": "ads",
-		"newTrafficPercentage": 0.2,
+		"newTrafficPercentage": 0.15,
 		"startViewsCount": 1000,
 		"statisticHours": 24
 	}
