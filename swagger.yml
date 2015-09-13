@@ -1,0 +1,91 @@
+swagger: '2.0'
+info:
+  title: Ads API
+  description: Monetize your app
+  version: 1.0.0
+host: goads.cloudapp.net
+schemes:
+  - https
+basePath: /v1
+produces:
+  - application/json
+paths:
+  /ads/view:
+    get:
+      summary: Ad to show
+      description: 'Basic opertaion to retrieve ad for client'
+      parameters:
+        - name: type
+          in: query
+          description: 'Type of ad to show. Possible values: "feed", "fullscreen"'
+          required: true
+          type: string
+        - name: appToken
+          in: query
+          description: 'An token of application'
+          required: true
+          type: string
+        - name: os
+          in: query
+          description: 'An operation system. Possible values: "ios", "android"'
+          required: true
+          type: string
+        - name: osVersion
+          in: query
+          description: 'A version of operation system'
+          required: true
+          type: string
+        - name: deviceModel
+          in: query
+          description: 'A model of device'
+          required: true
+          type: string
+        - name: gender
+          in: query
+          description: 'An optional information about gender. Possible values: "male", "female"'
+          required: false
+          type: string
+        - name: age
+          in: query
+          description: 'An optional information about age. Minimum value: 0. Maximum value: 255'
+          required: false
+          type: integer
+          format: int32
+      tags:
+        - Ads
+      responses:
+        '200':
+          description: An ad to display
+          schema:
+            $ref: '#/definitions/Ad'
+        '400':
+          description: Invalid request parameters
+          schema:
+            $ref: '#/definitions/Error'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+definitions:
+  Ad:
+    type: object
+    properties:
+      actionUrl:
+        type: string
+        description: 'An url to request after client clicks on ad'
+      bannerUrl:
+        type: string
+        description: 'An url to retrive banner'
+      description:
+        type: string
+        description: 'An description to display'
+  Error:
+    type: object
+    properties:
+      code:
+        type: integer
+        format: int32
+      message:
+        type: string
+      fields:
+        type: string
