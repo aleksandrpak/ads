@@ -89,8 +89,13 @@ func (c *controller) Click(w http.ResponseWriter, r *http.Request, p httprouter.
 		return
 	}
 
-	// TODO: For 100 not for 24 hours
-	//toggleAd(&view.AdID, c.app.Database(), false)
+	conversion, err := c.app.Database().Conversions().GetLast(&view.AdID, 1)
+	if err == nil {
+		click, err := c.app.Database().Clicks().GetLast(&view.AdID, 100)
+		if err == nil && click != nil && (conversion == nil || click.At > conversion.At) {
+			toggleAd(&view.AdID, c.app.Database(), false)
+		}
+	}
 
 	url, e := url.ParseRequestURI(ad.ConversionURL + clickID.Hex())
 	if e != nil {

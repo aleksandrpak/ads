@@ -13,6 +13,7 @@ import (
 
 type StatisticsCollection interface {
 	GetById(id *string) (*Statistic, log.ServerError)
+	GetLast(adID *bson.ObjectId, n int) (*Statistic, log.ServerError)
 	GetStatisticCount(adID *bson.ObjectId) float32
 	GetStatistics(adIDs *[]models.ID) *map[bson.ObjectId]float32
 	SaveStatistic(adID bson.ObjectId, appID bson.ObjectId, client *models.Client) *bson.ObjectId
@@ -48,6 +49,16 @@ func (c *statisticsCollection) GetById(id *string) (*Statistic, log.ServerError)
 
 	var result Statistic
 	err := c.FindId(bson.ObjectIdHex(*id)).One(&result)
+	if err != nil {
+		return nil, log.NewInternalError(err)
+	}
+
+	return &result, nil
+}
+
+func (c *statisticsCollection) GetLast(adID *bson.ObjectId, n int) (*Statistic, log.ServerError) {
+	var result Statistic
+	err := c.Find(bson.M{"adId": *adID}).Sort("-at").Skip(n - 1).One(&result)
 	if err != nil {
 		return nil, log.NewInternalError(err)
 	}
