@@ -9,10 +9,10 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
-	"git.startupteam.ru/aleksandrpak/ads/models"
-	"git.startupteam.ru/aleksandrpak/ads/models/statistic"
-	"git.startupteam.ru/aleksandrpak/ads/system/database"
-	"git.startupteam.ru/aleksandrpak/ads/system/log"
+	"github.com/aleksandrpak/ads/models"
+	"github.com/aleksandrpak/ads/models/statistic"
+	"github.com/aleksandrpak/ads/system/database"
+	"github.com/aleksandrpak/ads/system/log"
 	"github.com/julienschmidt/httprouter"
 )
 

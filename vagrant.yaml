@@ -13,7 +13,7 @@ keys:
 
 folders:
     - map: .
-      to: /home/vagrant/go/src/git.startupteam.ru/aleksandrpak/ads
+      to: /home/vagrant/go/src/github.com/aleksandrpak/ads
       type: nfs
 
 # sites:

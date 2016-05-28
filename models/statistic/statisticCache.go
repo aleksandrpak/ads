@@ -8,7 +8,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	"git.startupteam.ru/aleksandrpak/ads/system/log"
+	"github.com/aleksandrpak/ads/system/log"
 )
 
 const nanoseconds int64 = 60000000000

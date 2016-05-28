@@ -1,8 +1,8 @@
 package strategy
 
 import (
-	"git.startupteam.ru/aleksandrpak/ads/models"
-	"git.startupteam.ru/aleksandrpak/ads/system/log"
+	"github.com/aleksandrpak/ads/models"
+	"github.com/aleksandrpak/ads/system/log"
 )
 
 type Strategy interface {

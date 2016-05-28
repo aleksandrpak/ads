@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"strconv"
 
-	"git.startupteam.ru/aleksandrpak/ads/system/geoip"
-	"git.startupteam.ru/aleksandrpak/ads/system/log"
+	"github.com/aleksandrpak/ads/system/geoip"
+	"github.com/aleksandrpak/ads/system/log"
 )
 
 type ClientIds struct {

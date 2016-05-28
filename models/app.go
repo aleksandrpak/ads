@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"git.startupteam.ru/aleksandrpak/ads/system/log"
+	"github.com/aleksandrpak/ads/system/log"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"

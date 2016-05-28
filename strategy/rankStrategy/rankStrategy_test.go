@@ -5,8 +5,8 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
-	"git.startupteam.ru/aleksandrpak/ads/models"
-	"git.startupteam.ru/aleksandrpak/ads/models/statistic"
+	"github.com/aleksandrpak/ads/models"
+	"github.com/aleksandrpak/ads/models/statistic"
 
 	. "github.com/smartystreets/goconvey/convey"
 )

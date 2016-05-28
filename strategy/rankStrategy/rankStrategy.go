@@ -7,11 +7,11 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
-	"git.startupteam.ru/aleksandrpak/ads/models"
-	"git.startupteam.ru/aleksandrpak/ads/strategy"
-	"git.startupteam.ru/aleksandrpak/ads/system/config"
-	"git.startupteam.ru/aleksandrpak/ads/system/database"
-	"git.startupteam.ru/aleksandrpak/ads/system/log"
+	"github.com/aleksandrpak/ads/models"
+	"github.com/aleksandrpak/ads/strategy"
+	"github.com/aleksandrpak/ads/system/config"
+	"github.com/aleksandrpak/ads/system/database"
+	"github.com/aleksandrpak/ads/system/log"
 )
 
 const notFoundDesc string = "no suitable ad found"
